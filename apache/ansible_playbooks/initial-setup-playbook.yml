@@ -1,0 +1,25 @@
+---
+- hosts: all
+  vars:
+    vhost_dir: '/var/www/vhosts'
+  become: true
+  tasks:
+    - name: creaing vhosts dir
+      ansible.builtin.file:
+        state: directory
+        path: "{{ vhost_dir }}"
+
+    - name: pulling down files for website
+      ansible.builtin.command:
+        cmd: wget --directory-prefix '{{ vhost_dir }}' -m "https://www.professionallyevil.com/" --convert-links --page-requisites --no-parent -e robots=off
+        creates: '{{ vhost_dir }}/www.professionallyevil.com/index.html'
+
+    - name: installing & configuring apache
+      ansible.builtin.include_role: 
+        name: geerlingguy.apache
+      vars:
+        apache_remove_default_vhost: true
+        apache_listen_port: 80
+        apache_vhosts:
+          - servername: "127.0.0.1"
+            documentroot: '{{ vhost_dir }}/www.professionallyevil.com'

@@ -1,0 +1,42 @@
+---
+- hosts: all
+  vars:
+    vhost_dir: '/var/www/vhosts'
+  become: true
+  tasks:
+
+    - name: installing module security2 for apache
+      ansible.builtin.package:
+        state: present
+        name: libapache2-mod-security2
+
+    - name: installing & configuring apache
+      ansible.builtin.include_role: 
+        name: geerlingguy.apache
+      vars:
+        apache_remove_default_vhost: true
+        apache_listen_port: 80
+        apache_mods_enabled:
+          - rewrite
+          - ssl
+          - security2
+          - headers
+        apache_global_vhost_settings: |
+          <IfModule security2_module>
+              SecRuleEngine on
+              ServerTokens Min
+              SecServerSignature " "
+          </IfModule> 
+        apache_vhosts:
+          - servername: "127.0.0.1"
+            documentroot: '{{ vhost_dir }}/www.professionallyevil.com'
+            extra_parameters: |
+              <IfModule mod_headers.c>
+                  Header always append X-Frame-Options DENY
+                  Header set X-Content-Type-Options nosniff
+                  Header set X-Permitted-Cross-Domain-Policies "none"
+                  Header set Referrer-Policy "same-origin"
+                  Header set Cache-Control "no-store"
+                  Header set X-XSS-Protection "1; mode=block"
+                  Header set Content-Security-Policy "script-src 'strict-dynamic' 'unsafe-inline' http: https:; object-src 'none'; base-uri 'none'; require-trusted-types-for 'script';"
+              </IfModule>
